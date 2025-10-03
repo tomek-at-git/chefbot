@@ -1,7 +1,7 @@
 [project]
 name = "chefbot"
 version = "0.1.0"
-description = "Add your description here"
+description = "chat-with-your-recipes"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
