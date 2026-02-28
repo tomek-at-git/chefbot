@@ -90,19 +90,20 @@ Use **LiteLLM** behind a thin `typing.Protocol` interface, wrapped in a `Resilie
 
 ### Decision
 
-**Custom pytest-based eval harness with versioned JSON test fixtures** — no external eval framework.
+**deepeval** (test orchestration + custom `BaseMetric` subclasses) **+ MLflow** (experiment tracking, metric versioning, run comparison). Versioned JSON test fixtures stored in `evals/datasets/`.
 
 ### Rationale
 
-| Factor | Custom pytest | promptfoo | deepeval |
-|--------|--------------|-----------|---------|
-| Python-native | Yes (pytest mandated) | No (Node.js) | Yes but heavy deps |
-| Simplicity (Constitution §II) | Minimal moving parts | Requires Node.js, YAML DSL | Large dependency tree |
-| Scoring control | Full — domain-specific scorers | Generic graders, custom = JS | Opinionated RAG metrics |
-| CI integration | Native — already a pytest step | Separate Node.js step | Separate CLI command |
-| Baseline regression | Trivial JSON diff | Opaque caching format | No built-in diffing |
+| Factor | deepeval + MLflow | Custom pytest only | promptfoo |
+|--------|-------------------|--------------------|-----------|
+| Python-native | Yes — pytest plugin, BaseMetric API | Yes | No (Node.js) |
+| Metric versioning | MLflow tracks every run, parameters, and scores | Manual JSON diff | Opaque caching |
+| LLM-metric extensibility | BaseMetric subclass — straightforward to add LLM-as-judge metrics later | Rewrite scorer infra | JS-based custom graders |
+| Scoring control | Full — custom BaseMetric subclasses for all 3 dimensions | Full | Generic graders |
+| CI integration | pytest plugin — runs in existing pytest step | Native | Separate Node.js step |
+| Run comparison | MLflow UI + API for regression detection | Manual baseline diff | Built-in but limited |
 
-The three scoring dimensions (scaling accuracy, substitution relevance, allergen-conflict) are domain-specific enough that custom scorers are unavoidable regardless of framework.
+The three scoring dimensions (scaling accuracy, substitution relevance, allergen-conflict) are domain-specific enough that custom scorers (deepeval `BaseMetric` subclasses) are required regardless. deepeval provides the orchestration (test-case parametrization, structured reporting) while MLflow provides experiment tracking and metric versioning that a pure-pytest approach would need to reinvent.
 
 ### Scoring Methodology
 
@@ -139,8 +140,8 @@ The three scoring dimensions (scaling accuracy, substitution relevance, allergen
 
 | Alternative | Verdict |
 |-------------|---------|
-| promptfoo | Reconsider if multi-model A/B testing needed. Not justified for MVP. |
-| deepeval | Interesting for future RAG-style evals. Overkill and misaligned for MVP metrics. |
+| Custom pytest only (no deepeval) | Requires reinventing test-case orchestration, structured reporting, and metric versioning. Not worth the saved dependency. |
+| promptfoo | Reconsider if multi-model A/B testing needed. Node.js dependency not justified for MVP. |
 | Braintrust / LangSmith / W&B Weave | SaaS dependency, cost; beyond MVP needs. |
 | Pure `@pytest.mark.parametrize` (no JSON) | Doesn't scale to 100+ cases; can't diff dataset independently. |
 
@@ -167,12 +168,15 @@ api/
 
 evals/
 ├── datasets/            # Versioned JSON test fixtures
+├── metrics/             # Custom deepeval BaseMetric subclasses
+│   ├── numeric_tolerance.py   # Quantity scaling scorer
+│   ├── set_membership.py      # Substitution relevance scorer
+│   └── allergen_gate.py       # Allergen conflict hard gate
 ├── baselines/           # Accepted baseline reports
-├── reports/             # Generated reports (gitignored except baselines)
-├── scorers.py           # Scoring functions
-├── reporter.py          # Structured report generation
-├── regression.py        # Baseline comparison
-└── conftest.py          # pytest fixtures
+├── reports/             # Generated reports (gitignored)
+├── conftest.py          # pytest fixtures + MLflow experiment setup
+├── test_scaling_eval.py       # deepeval test cases for scaling
+└── test_substitution_eval.py  # deepeval test cases for substitutions
 
 docs/
 ├── adr/                 # Architecture Decision Records

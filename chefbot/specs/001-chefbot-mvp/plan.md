@@ -123,6 +123,7 @@ See [research.md](research.md) for full details. Summary:
 | R3 | Eval framework | deepeval (test runner + custom metrics) + MLflow (experiment tracking) | Metric versioning, run comparison, and LLM-metric extensibility out of the box; custom scorers as BaseMetric subclasses |
 | R4 | Project structure | `api/` + `evals/` + `docs/` | API-only MVP; mobile deferred to spike |
 | R5 | UserProfile storage | SQLite via `aiosqlite`, raw SQL | One table, 3 columns; ORM is overkill |
+| R6 | Agentic framework | None for MVP (deterministic orchestration) | Health-safety determinism, 5 intents only, revisit at ~8–10 intents |
 
 ## Design Artifacts (Phase 1)
 
